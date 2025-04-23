@@ -2372,7 +2372,7 @@ class sGrid():
             assert isinstance(mask, Raster)
         except:
             raise TypeError('`mask` must be a Raster instance.')
-        mask_overrides = {'dtype' : np.bool_, 'nodata' : False}
+        mask_overrides = {'dtype' : np.bool_, 'nodata' : np.False_}
         kwargs.update(mask_overrides)
         mask = self._input_handler(mask, **kwargs)
         affine = mask.affine
@@ -2390,14 +2390,26 @@ class sGrid():
 
     def _output_handler(self, data, viewfinder, metadata={}, **kwargs):
         new_view = ViewFinder(**viewfinder.properties)
+
         for param, value in kwargs.items():
             if (value is not None) and (hasattr(new_view, param)):
                 setattr(new_view, param, value)
-        if (data.ndim == 2):
-            dataset = Raster(data, new_view, metadata=metadata)
-        elif (data.ndim == 3):
-            dataset = MultiRaster(data, new_view, metadata=metadata)
-        return dataset
+
+        # --- 👇 Parche definitivo para compatibilidad con NumPy 1.25+ ---
+        # Convertir nodata al mismo dtype que el array (seguro)
+        try:
+            nodata = new_view.nodata
+            if isinstance(nodata, (int, float, bool)):
+                nodata_converted = np.array(nodata, dtype=data.dtype).item()
+                new_view.nodata = nodata_converted
+        except Exception as e:
+            raise TypeError(f"Error converting nodata value to array dtype: {e}")
+        # ----------------------------------------------------------------
+
+        if data.ndim == 2:
+            return Raster(data, new_view, metadata=metadata)
+        elif data.ndim == 3:
+            return MultiRaster(data, new_view, metadata=metadata)
 
     def _get_nodata_cells(self, data):
         try:

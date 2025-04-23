@@ -11,6 +11,14 @@ except ModuleNotFoundError:
 
 import pysheds._sview as _self
 
+def safe_can_cast(nodata, dtype):
+    try:
+        nodata_array = np.array(nodata, dtype=dtype)
+        return True
+    except TypeError:
+        return False
+
+
 
 class Raster(np.ndarray):
     """
@@ -82,7 +90,7 @@ class Raster(np.ndarray):
         except:
             raise TypeError('`object` and `flexible` dtypes not allowed.')
         try:
-            assert np.can_cast(viewfinder.nodata, obj.dtype, casting='safe')
+            assert safe_can_cast(viewfinder.nodata, obj.dtype)
         except:
             raise TypeError('`nodata` value not representable in dtype of array.')
         # Don't allow original viewfinder and metadata to be modified
